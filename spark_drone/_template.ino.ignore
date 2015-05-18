@@ -1,21 +1,26 @@
 
+/******************************************************************************/
+    /**
+        @file     application.ino
+        @author   Brent Pryer
+        @brief    logs data to local sd card
+
+    **/
+/******************************************************************************/
+
 /*----------------------------------INCLUDES----------------------------------*/
 #include "math.h"
-#include "TinyGPS.h"
+
 
 /*-------------------ENUM, TYPE AND CONSTANT DEFINITIONS----------------------*/
 #define ONE_DAY_MILLIS (24 * 60 * 60 * 1000) // 24 hours in millis
 
 
 /*---------------------------VARIABLE DEFINITIONS-----------------------------*/
-int wifiRSSI        = 0;                // wifi signal strength
-int lastWifiCheck   = millis() - 5000;  // 5 seconds ago
-int interval        = 30000;            // 30 seconds
-char* wifiSSID      = "NETWORK_NAME";   // wifi network name
-
-TinyGPS gps;
+int test;
 
 /*---------------------------FUNCTION DECLARATION-----------------------------*/
+void syncTime();
 
 
 /******************************************************************************/
@@ -26,9 +31,8 @@ TinyGPS gps;
 
     **/
 /******************************************************************************/
-void setup(){
-    Spark.variable("WiFi_RSSI", &wifiRSSI, INT);
-    Spark.variable("WiFi_SSID", wifiSSID, STRING);
+void setup() {
+
 }
 
 
@@ -40,14 +44,19 @@ void setup(){
 
     **/
 /******************************************************************************/
-void loop(){
-    int now = millis();
+void loop() {
 
-    if ((now - lastWifiCheck) > interval){
-        wifiRSSI = WiFi.RSSI();
-        wifiSSID = WiFi.SSID();
-        Spark.publish("WiFi_RSSI", String(wifiRSSI));
-        Spark.publish("WiFi_SSID", wifiSSID);
-        lastWifiCheck = millis();
-    }
+}
+
+
+/******************************************************************************/
+    /**
+        @name     exampleFunction
+        @brief    used for templating...
+        @return   void
+
+    **/
+/******************************************************************************/
+void exampleFunction(double temp){
+
 }
