@@ -67,54 +67,56 @@ TinyGPS::TinyGPS()
 // public methods
 //
 
-bool TinyGPS::encode(char c)
-{
-  bool valid_sentence = false;
+bool TinyGPS::encode(char c){
+    bool valid_sentence = false;
 
-#ifndef _GPS_NO_STATS
-  ++_encoded_characters;
-#endif
-  switch(c)
-  {
-  case ',': // term terminators
-    _parity ^= c;
-  case '\r':
-  case '\n':
-  case '*':
-    if (_term_offset < sizeof(_term))
-    {
-      _term[_term_offset] = 0;
-      valid_sentence = term_complete();
+    #ifndef _GPS_NO_STATS
+        ++_encoded_characters;
+    #endif
+
+    switch(c){
+        case ',': // term terminators
+            _parity ^= c;
+        case '\r':
+        case '\n':
+        case '*':
+            if (_term_offset < sizeof(_term)){
+                _term[_term_offset] = 0;
+                valid_sentence = term_complete();
+            }
+
+            ++_term_number;
+            _term_offset = 0;
+            _is_checksum_term = c == '*';
+
+            return valid_sentence;
+
+        case '$': // sentence begin
+            _term_number = _term_offset = 0;
+            _parity = 0;
+            _sentence_type = _GPS_SENTENCE_OTHER;
+            _is_checksum_term = false;
+            _gps_data_good = false;
+
+            return valid_sentence;
     }
-    ++_term_number;
-    _term_offset = 0;
-    _is_checksum_term = c == '*';
+
+    // ordinary characters
+    if (_term_offset < sizeof(_term) - 1)
+        _term[_term_offset++] = c;
+    if (!_is_checksum_term)
+        _parity ^= c;
+
     return valid_sentence;
-
-  case '$': // sentence begin
-    _term_number = _term_offset = 0;
-    _parity = 0;
-    _sentence_type = _GPS_SENTENCE_OTHER;
-    _is_checksum_term = false;
-    _gps_data_good = false;
-    return valid_sentence;
-  }
-
-  // ordinary characters
-  if (_term_offset < sizeof(_term) - 1)
-    _term[_term_offset++] = c;
-  if (!_is_checksum_term)
-    _parity ^= c;
-
-  return valid_sentence;
 }
 
 #ifndef _GPS_NO_STATS
-void TinyGPS::stats(unsigned long *chars, unsigned short *sentences, unsigned short *failed_cs)
-{
-  if (chars) *chars = _encoded_characters;
-  if (sentences) *sentences = _good_sentences;
-  if (failed_cs) *failed_cs = _failed_checksum;
+void TinyGPS::stats(unsigned long *chars, unsigned short *sentences,
+    unsigned short *failed_cs){
+
+    if (chars) *chars = _encoded_characters;
+    if (sentences) *sentences = _good_sentences;
+    if (failed_cs) *failed_cs = _failed_checksum;
 }
 #endif
 
@@ -123,50 +125,47 @@ void TinyGPS::stats(unsigned long *chars, unsigned short *sentences, unsigned sh
 //
 int TinyGPS::from_hex(char a)
 {
-  if (a >= 'A' && a <= 'F')
-    return a - 'A' + 10;
-  else if (a >= 'a' && a <= 'f')
-    return a - 'a' + 10;
-  else
-    return a - '0';
+    if (a >= 'A' && a <= 'F')
+        return a - 'A' + 10;
+    else if (a >= 'a' && a <= 'f')
+        return a - 'a' + 10;
+    else
+        return a - '0';
 }
 
 unsigned long TinyGPS::parse_decimal()
 {
-  char *p = _term;
-  bool isneg = *p == '-';
-  if (isneg) ++p;
-  unsigned long ret = 100UL * gpsatol(p);
-  while (gpsisdigit(*p)) ++p;
-  if (*p == '.')
-  {
-    if (gpsisdigit(p[1]))
-    {
-      ret += 10 * (p[1] - '0');
-      if (gpsisdigit(p[2]))
-        ret += p[2] - '0';
+    char *p = _term;
+    bool isneg = *p == '-';
+    if (isneg) ++p;
+        unsigned long ret = 100UL * gpsatol(p);
+    while (gpsisdigit(*p)) ++p;
+    if (*p == '.'){
+        if (gpsisdigit(p[1])){
+            ret += 10 * (p[1] - '0');
+
+            if (gpsisdigit(p[2]))
+                ret += p[2] - '0';
+        }
     }
-  }
-  return isneg ? -ret : ret;
+    return isneg ? -ret : ret;
 }
 
 // Parse a string in the form ddmm.mmmmmmm...
 unsigned long TinyGPS::parse_degrees()
 {
-  char *p;
-  unsigned long left_of_decimal = gpsatol(_term);
-  unsigned long hundred1000ths_of_minute = (left_of_decimal % 100UL) * 100000UL;
-  for (p=_term; gpsisdigit(*p); ++p);
-  if (*p == '.')
-  {
-    unsigned long mult = 10000;
-    while (gpsisdigit(*++p))
-    {
-      hundred1000ths_of_minute += mult * (*p - '0');
-      mult /= 10;
+    char *p;
+    unsigned long left_of_decimal = gpsatol(_term);
+    unsigned long hundred1000ths_of_minute = (left_of_decimal % 100UL) * 100000UL;
+    for (p=_term; gpsisdigit(*p); ++p);
+    if (*p == '.'){
+        unsigned long mult = 10000;
+        while (gpsisdigit(*++p)){
+            hundred1000ths_of_minute += mult * (*p - '0');
+            mult /= 10;
+        }
     }
-  }
-  return (left_of_decimal / 100) * 1000000 + (hundred1000ths_of_minute + 3) / 6;
+    return (left_of_decimal / 100) * 1000000 + (hundred1000ths_of_minute + 3) / 6;
 }
 
 #define COMBINE(sentence_type, term_number) (((unsigned)(sentence_type) << 5) | term_number)
